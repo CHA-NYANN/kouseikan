@@ -178,6 +178,23 @@
         object-fit: contain;
     }
 
+    /* Paksa tampilan landscape di HP (layar sentuh) saat device masih dipegang
+       portrait, dengan merotasi seluruh halaman 90 derajat. Begitu pemain
+       memutar HP-nya ke landscape, media query ini tidak aktif lagi dan
+       halaman tampil normal (tanpa rotasi) karena orientation sudah landscape. */
+    @media (pointer: coarse) and (orientation: portrait) {
+      html {
+        width: 100vh;
+        height: 100vw;
+        position: absolute;
+        top: 0;
+        left: 100%;
+        transform-origin: 0 0;
+        transform: rotate(90deg);
+        overflow: hidden;
+      }
+    }
+
   </style>
 
 </head>
@@ -224,6 +241,29 @@
           if (!navigator.serviceWorker.controller) {
               navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'all' });
           }
+      }
+
+      // Di HP: begitu pemain menyentuh layar pertama kali (biasanya untuk mulai
+      // membaca dialog), masuk ke mode fullscreen + kunci landscape sekalian.
+      // Browser melarang fullscreen/orientation-lock otomatis tanpa sentuhan
+      // pemain, jadi ini dipasang di sentuhan PERTAMA supaya terasa otomatis.
+      if (window.matchMedia('(pointer: coarse)').matches) {
+          var kkGoImmersive = function () {
+              var el = document.documentElement;
+              var req = el.requestFullscreen || el.webkitRequestFullscreen ||
+                        el.mozRequestFullScreen || el.msRequestFullscreen;
+              if (req) {
+                  try {
+                      var p = req.call(el);
+                      if (p && p.catch) { p.catch(function () {}); }
+                  } catch (e) {}
+              }
+              if (screen.orientation && screen.orientation.lock) {
+                  try { screen.orientation.lock('landscape').catch(function () {}); } catch (e) {}
+              }
+          };
+          document.addEventListener('touchend', kkGoImmersive, { once: true, passive: true });
+          document.addEventListener('click', kkGoImmersive, { once: true });
       }
   </script>
   <script src="renpy-pre.js"></script>
