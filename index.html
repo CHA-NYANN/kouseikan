@@ -298,6 +298,99 @@
           document.addEventListener('touchend', kkGoImmersive, { once: true, passive: true });
           document.addEventListener('click', kkGoImmersive, { once: true });
       }
+
+      // Banner "Install" di HP: kalau Kouseikan dipasang ke homescreen (bukan
+      // dibuka sebagai tab browser biasa), Android/iOS akan membuka langsung
+      // fullscreen + landscape (sesuai manifest.json) TANPA perlu sentuhan apa
+      // pun lagi setiap kali dibuka. Tap biasa (lihat kkGoImmersive di atas)
+      // adalah batas maksimal untuk tab browser biasa; install adalah satu-
+      // satunya cara mendapat fullscreen+landscape otomatis sejak awal.
+      if (window.matchMedia('(pointer: coarse)').matches) {
+          var kkStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                              window.navigator.standalone === true;
+          var kkDismissed = false;
+          try { kkDismissed = localStorage.getItem('kkInstallDismissed') === '1'; } catch (e) {}
+
+          if (!kkStandalone && !kkDismissed) {
+              var kkIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+              var kkShowBanner = function (message, buttonLabel, onButton) {
+                  if (document.getElementById('kkInstallBanner')) { return; }
+                  var banner = document.createElement('div');
+                  banner.id = 'kkInstallBanner';
+                  banner.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2000;' +
+                      'display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;' +
+                      'background:#241b2ff2;color:#ead5e9;font:13px/1.4 system-ui,sans-serif;' +
+                      'box-shadow:0 8px 30px rgba(0,0,0,.4);border:1px solid rgba(167,131,182,.35)';
+
+                  var text = document.createElement('span');
+                  text.style.cssText = 'flex:1';
+                  text.textContent = message;
+
+                  var btn = document.createElement('button');
+                  btn.type = 'button';
+                  btn.textContent = buttonLabel;
+                  btn.style.cssText = 'border:none;border-radius:8px;background:#7b69ac;color:#fff;' +
+                      'padding:8px 14px;font:inherit;font-weight:600;white-space:nowrap;flex-shrink:0';
+
+                  var closeBtn = document.createElement('button');
+                  closeBtn.type = 'button';
+                  closeBtn.setAttribute('aria-label', 'Tutup');
+                  closeBtn.textContent = '✕';
+                  closeBtn.style.cssText = 'border:none;background:transparent;color:#ead5e9;' +
+                      'font-size:16px;padding:4px 6px;opacity:.7;flex-shrink:0';
+
+                  var kkDismiss = function () {
+                      try { localStorage.setItem('kkInstallDismissed', '1'); } catch (e) {}
+                      if (banner.parentNode) { banner.parentNode.removeChild(banner); }
+                  };
+
+                  btn.addEventListener('click', function () { onButton(kkDismiss); });
+                  closeBtn.addEventListener('click', kkDismiss);
+
+                  banner.appendChild(text);
+                  banner.appendChild(btn);
+                  banner.appendChild(closeBtn);
+                  document.body.appendChild(banner);
+              };
+
+              if (kkIOS) {
+                  // Safari iOS tidak punya API untuk memicu "Add to Home Screen"
+                  // secara otomatis; cuma bisa dipandu lewat tombol Bagikan.
+                  setTimeout(function () {
+                      kkShowBanner(
+                          'Pasang Kouseikan: ketuk tombol Bagikan lalu "Add to Home Screen" supaya main fullscreen landscape.',
+                          'Mengerti',
+                          function (dismiss) { dismiss(); }
+                      );
+                  }, 3000);
+              } else {
+                  var kkDeferredInstall = null;
+                  window.addEventListener('beforeinstallprompt', function (e) {
+                      e.preventDefault();
+                      kkDeferredInstall = e;
+                      setTimeout(function () {
+                          kkShowBanner(
+                              'Pasang Kouseikan supaya langsung fullscreen landscape tiap dibuka.',
+                              'Install',
+                              function (dismiss) {
+                                  if (!kkDeferredInstall) { dismiss(); return; }
+                                  kkDeferredInstall.prompt();
+                                  kkDeferredInstall.userChoice.finally(function () {
+                                      kkDeferredInstall = null;
+                                      dismiss();
+                                  });
+                              }
+                          );
+                      }, 3000);
+                  });
+                  window.addEventListener('appinstalled', function () {
+                      var el = document.getElementById('kkInstallBanner');
+                      if (el && el.parentNode) { el.parentNode.removeChild(el); }
+                  });
+              }
+          }
+      }
   </script>
   <script src="renpy-pre.js"></script>
   <!-- KK_ENGINE_START -->
