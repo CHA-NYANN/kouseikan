@@ -178,23 +178,6 @@
         object-fit: contain;
     }
 
-    /* Paksa tampilan landscape di HP (layar sentuh) saat device masih dipegang
-       portrait, dengan merotasi seluruh halaman 90 derajat. Begitu pemain
-       memutar HP-nya ke landscape, media query ini tidak aktif lagi dan
-       halaman tampil normal (tanpa rotasi) karena orientation sudah landscape. */
-    @media (pointer: coarse) and (orientation: portrait) {
-      html {
-        width: 100vh;
-        height: 100vw;
-        position: absolute;
-        top: 0;
-        left: 100%;
-        transform-origin: 0 0;
-        transform: rotate(90deg);
-        overflow: hidden;
-      }
-    }
-
   </style>
 
 <!-- KK_HEAD_START -->
